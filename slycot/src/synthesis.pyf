@@ -575,6 +575,43 @@ subroutine sb10jd(n,m,np,a,lda,b,ldb,c,ldc,d,ldd,e,lde,nsys,dwork,ldwork,info) !
 integer required intent(in) :: ldwork
     integer intent(out) :: info
 end subroutine sb10jd
+subroutine sb10md(nc, mp, lendat, f, ord, mnb, nblock, itype, qutol, a, lda, b, ldb, c, ldc, d, ldd, omega, totord, ad, ldad, bd, ldbd, cd, ldcd, dd, lddd, mju, iwork, liwork, dwork, ldwork, zwork, lzwork, info) ! in SB10MB.f
+    integer intent(hide) :: nc=shape(a,1)
+    integer intent(hide) :: mp=shape(b,1)
+    integer intent(hide) :: lendat=len(omega)
+    integer intent(in) :: f
+    integer intent(in,out,copy) :: ord
+    integer intent(hide) :: mnb=len(nblock)
+    integer intent(in),dimension(mnb) :: nblock
+    integer intent(in),dimension(mnb) :: itype
+    double precision intent(in) :: qutol
+    double precision intent(in,out,copy),dimension(lda,nc) :: a
+    integer intent(hide),depend(a) :: lda=MAX(shape(a,0),1)
+    double precision intent(in,out,copy),dimension(lda,mp) :: b
+    integer intent(hide),depend(b) :: ldb=MAX(shape(b,0),1)
+    double precision intent(in,out,copy),dimension(ldc,nc) :: c
+    integer intent(hide),depend(c) :: ldc=MAX(shape(c,0),1)
+    double precision intent(in,out,copy),dimension(ldd,mp) :: d
+    integer intent(hide),depend(d) :: ldd=MAX(shape(d,0),1)
+    double precision intent(in),dimension(lendat) :: omega
+    integer intent(out) :: totord
+    double precision intent(out),dimension(ldad,mp*ord) :: ad
+    integer intent(in) :: ldad ! compute ld?d in synthesis.py
+    double precision intent(out),dimension(ldbd,mp+f) :: bd
+    integer intent(in) :: ldbd
+    double precision intent(out),dimension(ldcd,mp*ord) :: cd
+    integer intent(in) :: ldcd
+    double precision intent(out),dimension(lddd,mp+f) :: dd
+    integer intent(in) :: lddd
+    double precision intent(out),dimension(lendat) :: mju
+    integer intent(hide,cache),dimension(liwork),depend(liwork) :: iwork
+    integer intent(in) :: liwork ! compute *work in synthesis.py
+    double precision intent(out),dimension(ldwork),depend(ldwork) :: dwork
+    integer intent(in) :: ldwork
+    complex*16 intent(hide,cache),dimension(lzwork),depend(lzwork) :: zwork
+    integer intent(in) :: lzwork
+    integer intent(out) :: info
+end subroutine sb10md
 subroutine sb10yd(discfl,flag,lendat,rfrdat,ifrdat,omega,n,a,lda,b,c,d,tol,iwork,dwork,ldwork,zwork,lzwork,info) ! in SB10YD.f
     integer intent(in) :: discfl
     integer intent(in) :: flag

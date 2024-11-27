@@ -59,7 +59,7 @@ else:
                             sb02md, sb02mt, sb02od,
                             sb03md, sb03md57, sb03od,
                             sb04md, sb04qd,
-                            sb10ad, sb10dd, sb10fd, sb10hd, sb10jd, sb10yd,
+                            sb10ad, sb10dd, sb10fd, sb10hd, sb10jd, sb10md, sb10yd,
                             sg02ad,
                             sg03ad, sg03bd)
                             
