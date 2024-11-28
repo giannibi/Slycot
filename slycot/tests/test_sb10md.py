@@ -127,7 +127,7 @@ def musyn(AG, BG, CG, DG, f, nblock, itype, omega, maxiter=10, qutol=2, order=4,
                   best_mubar = mubar
                   if i > 1:
                         # And the best controller
-                        k = kb
+                        Ak,Bk,Ck,Dk = Akb,Bkb,Ckb,Dkb
             i = i+1
             if i > maxiter:
                   break 
@@ -139,12 +139,12 @@ def musyn(AG, BG, CG, DG, f, nblock, itype, omega, maxiter=10, qutol=2, order=4,
 
             # K-step: compute controller for current scaling
             try: 
-                  kb, cl0, gamma, rcond = myhinfsyn(ADGDInv,BDGDInv,CDGDInv,DDGDInv, f, f, initgamma)
+                  Akb,Bkb,Ckb,Dkb,Ac,Bc,Cc,Dc, gamma, rcond = myhinfsyn(ADGDInv,BDGDInv,CDGDInv,DDGDInv, f, f, initgamma)
             except:
                   # Something went wrong: keep last controller
-                  kb = k
+                  Akb,Bkb,Ckb,Dkb = Ak,Bk,Ck,Dk
 
-      return k, best_nubar, initial_mubar, best_mubar, gamma
+      return Ak,Bk,Ck,Dk, best_nubar, initial_mubar, best_mubar, gamma
 
 
 
@@ -216,7 +216,7 @@ class Test_sb10md():
       omega = np.logspace(-3, 3, 61)
 
       # Do mu-synthesis via D-K iteration
-      K, best_nubar, init_mubar, best_mubar, gamma = musyn(G_A, G_B, G_C, G_D, f, nblock, itype, omega, order=4, qutol=1, initgamma=10)
+      Ak,Bk,Ck,Dk, best_nubar, init_mubar, best_mubar, gamma = musyn(G_A, G_B, G_C, G_D, f, nblock, itype, omega, order=4, qutol=1, initgamma=10)
 
       # Testing Assertion
       assert_array_less(best_nubar, 1.03)
