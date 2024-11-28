@@ -1,5 +1,3 @@
-import matplotlib.pyplot as plt
-from itertools import product
 import slycot as sly
 import numpy as np
 import control as ct
@@ -186,10 +184,3 @@ omega = np.logspace(-3, 3, 61)
 K, best_nubar, init_mubar, best_mubar, gamma = musyn(G, f, nblock, itype, omega, order=4, qutol=1, initgamma=10)
 
 print("Best upper bound to mu norm of Tzw_delta: ", best_nubar)
-
-plt.loglog(omega, best_mubar, label=r'Final $\bar \mu$')
-plt.loglog(omega, init_mubar, label=r'Initial $\bar \mu$')
-plt.ylabel(r'$\bar\mu$ value')
-plt.xlabel('freq [rad/s]')
-plt.legend()
-plt.title(r'Initial and final $\bar\mu$')
