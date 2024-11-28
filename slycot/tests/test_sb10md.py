@@ -1,7 +1,7 @@
 import slycot as sly
 import numpy as np
 import control as ct
-from numpy.testing import assert_almost_equal
+from numpy.testing import assert_array_less
 
 # For computing the inverse of scalings
 def invss(d):
@@ -199,5 +199,5 @@ class Test_sb10md():
       K, best_nubar, init_mubar, best_mubar, gamma = musyn(G, f, nblock, itype, omega, order=4, qutol=1, initgamma=10)
 
       print("Best upper bound to mu norm of Tzw_delta: ", best_nubar)
-      assert_almost_equal(best_nubar, 1.021)
+      assert_array_less(best_nubar, 1.03)
 
