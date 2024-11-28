@@ -142,6 +142,7 @@ def musyn(AG, BG, CG, DG, f, nblock, itype, omega, maxiter=10, qutol=2, order=4,
                   Akb,Bkb,Ckb,Dkb,Ac,Bc,Cc,Dc, gamma, rcond = myhinfsyn(ADGDInv,BDGDInv,CDGDInv,DDGDInv, f, f, initgamma)
             except:
                   # Something went wrong: keep last controller
+                  print("Sculo")
                   Akb,Bkb,Ckb,Dkb = Ak,Bk,Ck,Dk
 
       return Ak,Bk,Ck,Dk, best_nubar, initial_mubar, best_mubar, gamma
