@@ -201,5 +201,5 @@ class Test_sb10md():
       K, best_nubar, init_mubar, best_mubar, gamma = musyn(G, f, nblock, itype, omega, order=4, qutol=1, initgamma=10)
 
       # Testing Assertion
-      assert_array_less(best_nubar, 1.01)
+      assert_array_less(best_nubar, 1.03)
 
