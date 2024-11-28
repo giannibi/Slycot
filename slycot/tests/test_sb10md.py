@@ -1,7 +1,7 @@
 import slycot as sly
 import numpy as np
 import control as ct
-
+from numpy.testing import assert_almost_equal
 
 # For computing the inverse of scalings
 def invss(d):
@@ -146,53 +146,58 @@ def musyn(G, f, nblock, itype, omega, maxiter=10, qutol=2, order=4, reduce=0, in
       return k, best_nubar, initial_mubar, best_mubar, gamma
 
 
+class Test_sb10md():
+      
+     def test_sb10md_0(self):
+          
+      # Plant transfer function P
+      gain = ct.StateSpace([],[],[],np.array([[87.8, -86.4],
+                                          [108.2, -109.6]]))
+      dyn = ct.tf2ss(ct.tf([1],[75,1]))
+      P = ct.append(dyn,dyn) * gain
 
-# Plant transfer function P
-gain = ct.StateSpace([],[],[],np.array([[87.8, -86.4],
-                                         [108.2, -109.6]]))
-dyn = ct.tf2ss(ct.tf([1],[75,1]))
-P = ct.append(dyn,dyn) * gain
+      # Plant input and output labels
+      P.input_labels = ['up[0]','up[1]']
+      P.output_labels = ['yp[0]','yp[1]']
 
-# Plant input and output labels
-P.input_labels = ['up[0]','up[1]']
-P.output_labels = ['yp[0]','yp[1]']
+      # Undertainty weight
+      Wi = ct.tf2ss(ct.tf([1,0.2],[0.5,1]))
+      Wi = ct.append(Wi, Wi)
+      Wi.output_labels = ['zdelta[0]', 'zdelta[1]']
 
-# Undertainty weight
-Wi = ct.tf2ss(ct.tf([1,0.2],[0.5,1]))
-Wi = ct.append(Wi, Wi)
-Wi.output_labels = ['zdelta[0]', 'zdelta[1]']
+      # Performance weight on sensitivity
+      Wp = 0.5*ct.tf2ss(ct.tf([10,1],[10,1e-5])) # table 8.2
+      Wp = ct.append(Wp, Wp)
+      Wp.input_labels = ['y[0]', 'y[1]']
+      Wp.output_labels = ['z[0]', 'z[1]']
 
-# Performance weight on sensitivity
-Wp = 0.5*ct.tf2ss(ct.tf([10,1],[10,1e-5])) # table 8.2
-Wp = ct.append(Wp, Wp)
-Wp.input_labels = ['y[0]', 'y[1]']
-Wp.output_labels = ['z[0]', 'z[1]']
+      # Summing junction into P
+      sdelta = ct.summing_junction(inputs=['u','wdelta'], output='up', dimension=2)
 
-# Summing junction into P
-sdelta = ct.summing_junction(inputs=['u','wdelta'], output='up', dimension=2)
+      # Feedback summing junction
+      fbk = ct.summing_junction(inputs=['w','-yp'], output='y', dimension=2)
 
-# Feedback summing junction
-fbk = ct.summing_junction(inputs=['w','-yp'], output='y', dimension=2)
-
-# Generate LFT for mu synthesis
-G = ct.interconnect([P, Wi, Wp, sdelta, fbk],
-                    inputs=['wdelta[0]','wdelta[1]','w[0]','w[1]','u[0]','u[1]'],
-                    outputs=['zdelta[0]','zdelta[1]','z[0]','z[1]','y[0]','y[1]'])
+      # Generate LFT for mu synthesis
+      G = ct.interconnect([P, Wi, Wp, sdelta, fbk],
+                        inputs=['wdelta[0]','wdelta[1]','w[0]','w[1]','u[0]','u[1]'],
+                        outputs=['zdelta[0]','zdelta[1]','z[0]','z[1]','y[0]','y[1]'])
 
 
-# Controller I/O sizes
-f = 2
+      # Controller I/O sizes
+      f = 2
 
-# Extended uncertainty structure: two 1x1 uncertainty blocks and a 2x2 performance block
-nblock = np.array([1,1,2])
+      # Extended uncertainty structure: two 1x1 uncertainty blocks and a 2x2 performance block
+      nblock = np.array([1,1,2])
 
-# This has to be == 2 (complex uncertainty) for each block (other values are not implemented)
-itype = np.array([2,2,2])
+      # This has to be == 2 (complex uncertainty) for each block (other values are not implemented)
+      itype = np.array([2,2,2])
 
-# Frequency range for mu computations
-omega = np.logspace(-3, 3, 61)
+      # Frequency range for mu computations
+      omega = np.logspace(-3, 3, 61)
 
-# Do mu-synthesis via D-K iteration
-K, best_nubar, init_mubar, best_mubar, gamma = musyn(G, f, nblock, itype, omega, order=4, qutol=1, initgamma=10)
+      # Do mu-synthesis via D-K iteration
+      K, best_nubar, init_mubar, best_mubar, gamma = musyn(G, f, nblock, itype, omega, order=4, qutol=1, initgamma=10)
 
-print("Best upper bound to mu norm of Tzw_delta: ", best_nubar)
+      print("Best upper bound to mu norm of Tzw_delta: ", best_nubar)
+      assert_almost_equal(best_nubar, 1.021)
+
