@@ -16,7 +16,7 @@ def invss(A,B,C,D):
 def cascss(A1,B1,C1,D1,A2,B2,C2,D2):
      n, _ = np.shape(A1)
      _, m = np.shape(A2)
-     A = np.block([[A1,np.zeros(n,m)],[B2*C1,A2]])
+     A = np.block([[A1,np.zeros((n,m))],[B2*C1,A2]])
      B = np.block([[B1],[B2*D1]])
      C = np.block([D2*C1,C2])
      D = D2*D1
