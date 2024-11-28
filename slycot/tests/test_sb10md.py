@@ -58,7 +58,7 @@ def myhinfsyn(P, nmeas, ncon, initgamma=1e6):
     return K, CL, gam, rcond
 
 
-def musyn(G, f, nblock, itype, omega, maxiter=10, qutol=2, order=4, reduce=0, initgamma=1e6, verbose=True):
+def musyn(G, f, nblock, itype, omega, maxiter=10, qutol=2, order=4, reduce=0, initgamma=1e6, verbose=False):
       '''
       Perform mu synthesis using D-K iteration
       
@@ -146,6 +146,8 @@ def musyn(G, f, nblock, itype, omega, maxiter=10, qutol=2, order=4, reduce=0, in
       return k, best_nubar, initial_mubar, best_mubar, gamma
 
 
+
+
 class Test_sb10md():
       
      def test_sb10md_0(self):
@@ -198,6 +200,6 @@ class Test_sb10md():
       # Do mu-synthesis via D-K iteration
       K, best_nubar, init_mubar, best_mubar, gamma = musyn(G, f, nblock, itype, omega, order=4, qutol=1, initgamma=10)
 
-      print("Best upper bound to mu norm of Tzw_delta: ", best_nubar)
-      assert_array_less(best_nubar, 1.03)
+      # Testing Assertion
+      assert_array_less(best_nubar, 1.01)
 
