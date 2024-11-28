@@ -63,7 +63,7 @@ def myhinfsyn(A,B,C,D, nmeas, ncon, initgamma=1e6):
     return Ak, Bk, Ck, Dk, Ac, Bc, Cc, Dc, gam, rcond
 
 
-def musyn(AG, BG, CG, DG, f, nblock, itype, omega, maxiter=10, qutol=2, order=4, initgamma=1e6, verbose=False):
+def musyn(AG, BG, CG, DG, f, nblock, itype, omega, maxiter=10, qutol=2, order=4, initgamma=1e6, verbose=True):
       '''
       Perform mu synthesis using D-K iteration
       
