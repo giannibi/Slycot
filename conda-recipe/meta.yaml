@@ -33,6 +33,7 @@ test:
   requires:
     - pytest
     - scipy
+    - control
   imports:
     - slycot
   commands:
