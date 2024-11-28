@@ -1,21 +1,29 @@
 import slycot as sly
 import numpy as np
-import control as ct
 from numpy.testing import assert_array_less
 
 # For computing the inverse of scalings
-def invss(d):
+def invss(A,B,C,D):
     # inverse of D
-    dinv = np.linalg.inv(d.D)
+    dinv = np.linalg.inv(D)
     # inverse system matrices
-    ainv = d.A - d.B @ dinv @ d.C
-    binv = d.B @ dinv
-    cinv = -dinv @ d.C
+    ainv = A - B @ dinv @ C
+    binv = B @ dinv
+    cinv = -dinv @ C
 
-    return ct.StateSpace(ainv, binv, cinv, dinv)
+    return ainv, binv, cinv, dinv
+
+def cascss(A1,B1,C1,D1,A2,B2,C2,D2):
+     n, _ = np.shape(A1)
+     _, m = np.shape(A2)
+     A = np.block([[A1,np.zeros(n,m)],[B2*C1,A2]])
+     B = np.block([[B1],[B2*D1]])
+     C = np.block([D2*C1,C2])
+     D = D2*D1
+     return A,B,C,D
 
 
-def myhinfsyn(P, nmeas, ncon, initgamma=1e6):
+def myhinfsyn(A,B,C,D, nmeas, ncon, initgamma=1e6):
     """H_{inf} control synthesis for plant P.
 
     Parameters
@@ -37,10 +45,10 @@ def myhinfsyn(P, nmeas, ncon, initgamma=1e6):
         4: Y-Riccati equation
     """
 
-    n = np.size(P.A, 0)
-    m = np.size(P.B, 1)
-    np_ = np.size(P.C, 0)
-    out = sly.sb10ad(n, m, np_, ncon, nmeas, initgamma, P.A, P.B, P.C, P.D)
+    n = np.size(A, 0)
+    m = np.size(B, 1)
+    np_ = np.size(C, 0)
+    out = sly.sb10ad(n, m, np_, ncon, nmeas, initgamma, A, B, C, D)
     gam = out[0]
     Ak = out[1]
     Bk = out[2]
@@ -52,20 +60,17 @@ def myhinfsyn(P, nmeas, ncon, initgamma=1e6):
     Dc = out[8]
     rcond = out[9]
 
-    K = ct.StateSpace(Ak, Bk, Ck, Dk)
-    CL = ct.StateSpace(Ac, Bc, Cc, Dc)
-
-    return K, CL, gam, rcond
+    return Ak, Bk, Ck, Dk, Ac, Bc, Cc, Dc, gam, rcond
 
 
-def musyn(G, f, nblock, itype, omega, maxiter=10, qutol=2, order=4, reduce=0, initgamma=1e6, verbose=False):
+def musyn(AG, BG, CG, DG, f, nblock, itype, omega, maxiter=10, qutol=2, order=4, initgamma=1e6, verbose=False):
       '''
       Perform mu synthesis using D-K iteration
       
       K, best_nubar, init_mubar, best_mubar, gamma 
-               = musyn(G, f, nblock, itype, omega, maxiter=10, qutol=2, order=4, reduce=0, verbose=True)
+               = musyn(G, f, nblock, itype, omega, maxiter=10, qutol=2, order=4, verbose=True)
                
-      G:       LFT form of the system from [wdelta,u] to [zdelta,y]
+      *G:       LFT form of the system from [wdelta,u] to [zdelta,y]
       f:       controller input-output dimension
       nblock:  uncertainty structure (vector of sizes of uncertain blocks)
       itype:   must be 2 for each entry of nblock, other values not implemented
@@ -73,9 +78,6 @@ def musyn(G, f, nblock, itype, omega, maxiter=10, qutol=2, order=4, reduce=0, in
       maxiter: max number of iterations
       qutol:   tolerance for sb10md routine, play with it only if you get numerical problems
       order:   order of the scalings D(j*omega), increase it to try to get more accurate results (unlikely)
-      reduce:  if > 0, do a model reduction on the closed loop at each iteration for the sake of computing 
-               the scaling D; set it to something lower than the full order of cl0 if you run into numerical
-               problems (may impact performance of the final controller)
       verbose: print iteration info
       K:       controller
       best_nubar:
@@ -87,7 +89,7 @@ def musyn(G, f, nblock, itype, omega, maxiter=10, qutol=2, order=4, reduce=0, in
       gamma:   closed loop norm achieved by initial Hinf controller
       '''
       # Initial K-step: compute an initial optimal Hinf controller without D scaling
-      k, cl0, gamma, rcond = myhinfsyn(G, f, f, initgamma)
+      Ak, Bk, Ck, Dk, Ac, Bc, Cc, Dc, gamma, rcond = myhinfsyn(G, f, f, initgamma)
       if verbose:
             print("Infinity norm of Tzw_delta with initial Hinfinity controller: ", gamma)
 
@@ -102,9 +104,7 @@ def musyn(G, f, nblock, itype, omega, maxiter=10, qutol=2, order=4, reduce=0, in
             # and the corresponding upper bound mubar vs. frequency
             # If numerical problems occur, try reducing the order of the closed loop cl0
             # for the sake of computing the scaling D. This may impact the performance of the final controller
-            if reduce > 0:
-                cl0 = ct.balred(cl0, reduce, method='truncate')
-            _, _, _, _, _, _, D_A, D_B, D_C, D_D, mubar, _ = sly.sb10md(f, order, nblock, itype, qutol, cl0.A, cl0.B, cl0.C, cl0.D, omega)
+            _, _, _, _, _, _, D_A, D_B, D_C, D_D, mubar, _ = sly.sb10md(f, order, nblock, itype, qutol, Ac, Bc, Cc, Dc, omega)
             if i == 1:
                   # Save the mubar of the first iteration
                   initial_mubar = mubar
@@ -132,13 +132,14 @@ def musyn(G, f, nblock, itype, omega, maxiter=10, qutol=2, order=4, reduce=0, in
             if i > maxiter:
                   break 
 
-            D = ct.StateSpace(D_A, D_B, D_C, D_D)
+            ADinv, BDinv, CDinv, DDinv = invss(D_A, D_B, D_C, D_D)
             # Compute D*G*(inv(D))
-            DGDInv =  ct.minreal(D * G * invss(D), verbose = False)
+            A1,B1,C1,D1 = cascss(ADinv,BDinv,CDinv,DDinv,AG,BG,CG,DG)
+            ADGDInv,BDGDInv,CDGDInv,DDGDInv = cascss(A1,B1,C1,D1,D_A,D_B,D_C,D_D)
 
             # K-step: compute controller for current scaling
             try: 
-                  kb, cl0, gamma, rcond = myhinfsyn(DGDInv, f, f, initgamma)
+                  kb, cl0, gamma, rcond = myhinfsyn(ADGDInv,BDGDInv,CDGDInv,DDGDInv, f, f, initgamma)
             except:
                   # Something went wrong: keep last controller
                   kb = k
@@ -152,37 +153,54 @@ class Test_sb10md():
       
      def test_sb10md_0(self):
           
-      # Plant transfer function P
-      gain = ct.StateSpace([],[],[],np.array([[87.8, -86.4],
-                                          [108.2, -109.6]]))
-      dyn = ct.tf2ss(ct.tf([1],[75,1]))
-      P = ct.append(dyn,dyn) * gain
-
-      # Plant input and output labels
-      P.input_labels = ['up[0]','up[1]']
-      P.output_labels = ['yp[0]','yp[1]']
-
-      # Undertainty weight
-      Wi = ct.tf2ss(ct.tf([1,0.2],[0.5,1]))
-      Wi = ct.append(Wi, Wi)
-      Wi.output_labels = ['zdelta[0]', 'zdelta[1]']
-
-      # Performance weight on sensitivity
-      Wp = 0.5*ct.tf2ss(ct.tf([10,1],[10,1e-5])) # table 8.2
-      Wp = ct.append(Wp, Wp)
-      Wp.input_labels = ['y[0]', 'y[1]']
-      Wp.output_labels = ['z[0]', 'z[1]']
-
-      # Summing junction into P
-      sdelta = ct.summing_junction(inputs=['u','wdelta'], output='up', dimension=2)
-
-      # Feedback summing junction
-      fbk = ct.summing_junction(inputs=['w','-yp'], output='y', dimension=2)
-
-      # Generate LFT for mu synthesis
-      G = ct.interconnect([P, Wi, Wp, sdelta, fbk],
-                        inputs=['wdelta[0]','wdelta[1]','w[0]','w[1]','u[0]','u[1]'],
-                        outputs=['zdelta[0]','zdelta[1]','z[0]','z[1]','y[0]','y[1]'])
+     # LFT representation for the robust performance problem
+      
+      G_A = np.array([[-1.00000000e-06,  0.00000000e+00, -6.66666667e-02,
+        -6.93889390e-18,  6.93889390e-18, -1.38777878e-17],
+       [ 0.00000000e+00, -1.00000000e-06, -1.24571246e-17,
+        -6.66666667e-02,  0.00000000e+00,  0.00000000e+00],
+       [ 0.00000000e+00,  0.00000000e+00, -1.33333333e-02,
+        -3.56691510e-17, -4.45118870e-16,  2.18487185e-16],
+       [ 0.00000000e+00,  0.00000000e+00, -1.50973436e-17,
+        -1.33333333e-02,  2.45649572e-16,  3.01300498e-17],
+       [ 0.00000000e+00,  0.00000000e+00,  1.29953970e-16,
+        -1.72182401e-16, -2.00000000e+00,  2.74651719e-16],
+       [ 0.00000000e+00,  0.00000000e+00, -1.07552856e-16,
+         3.38271078e-17,  0.00000000e+00, -2.00000000e+00]])
+      
+      G_B = np.array([[ 0.00000000e+00,  0.00000000e+00,  0.00000000e+00,
+        -5.00000000e-02,  0.00000000e+00,  0.00000000e+00],
+       [ 0.00000000e+00,  0.00000000e+00,  5.00000000e-02,
+         0.00000000e+00,  0.00000000e+00,  0.00000000e+00],
+       [ 1.08200000e+00, -1.09600000e+00,  0.00000000e+00,
+         0.00000000e+00,  1.08200000e+00, -1.09600000e+00],
+       [-8.78000000e-01,  8.64000000e-01,  0.00000000e+00,
+         0.00000000e+00, -8.78000000e-01,  8.64000000e-01],
+       [-2.63083827e-17, -1.27004847e-16,  0.00000000e+00,
+         0.00000000e+00, -2.63083827e-17,  1.00000000e+00],
+       [ 0.00000000e+00,  0.00000000e+00,  0.00000000e+00,
+         0.00000000e+00,  1.00000000e+00,  0.00000000e+00]])
+      
+      G_C = np.array([[ 0.00000000e+00,  0.00000000e+00,  0.00000000e+00,
+         0.00000000e+00,  0.00000000e+00, -3.60000000e+00],
+       [ 0.00000000e+00,  0.00000000e+00,  0.00000000e+00,
+         0.00000000e+00, -3.60000000e+00, -8.88178420e-16],
+       [ 0.00000000e+00,  9.99990000e-01, -2.19881109e-16,
+        -6.66666667e-01,  4.16333634e-17,  0.00000000e+00],
+       [-9.99990000e-01,  0.00000000e+00,  6.66666667e-01,
+         0.00000000e+00,  0.00000000e+00, -5.55111512e-17],
+       [ 0.00000000e+00,  0.00000000e+00,  0.00000000e+00,
+         1.33333333e+00, -8.32667268e-17,  0.00000000e+00],
+       [ 0.00000000e+00,  0.00000000e+00, -1.33333333e+00,
+         0.00000000e+00,  0.00000000e+00,  1.11022302e-16]])
+      
+      G_D = np.array([[ 0. ,  0. ,  0. ,  0. ,  2. ,  0. ],
+       [ 0. ,  0. ,  0. ,  0. ,  0. ,  2. ],
+       [ 0. ,  0. ,  0.5,  0. ,  0. ,  0. ],
+       [ 0. ,  0. ,  0. ,  0.5,  0. ,  0. ],
+       [ 0. ,  0. , -1. ,  0. ,  0. ,  0. ],
+       [ 0. ,  0. ,  0. , -1. ,  0. ,  0. ]])
+      
 
 
       # Controller I/O sizes
@@ -198,7 +216,7 @@ class Test_sb10md():
       omega = np.logspace(-3, 3, 61)
 
       # Do mu-synthesis via D-K iteration
-      K, best_nubar, init_mubar, best_mubar, gamma = musyn(G, f, nblock, itype, omega, order=4, qutol=1, initgamma=10)
+      K, best_nubar, init_mubar, best_mubar, gamma = musyn(G_A, G_B, G_C, G_D, f, nblock, itype, omega, order=4, qutol=1, initgamma=10)
 
       # Testing Assertion
       assert_array_less(best_nubar, 1.03)
