@@ -3,6 +3,18 @@ import numpy as np
 import control as ct
 
 
+# For computing the inverse of scalings
+def invss(d):
+    # inverse of D
+    dinv = np.linalg.inv(d.D)
+    # inverse system matrices
+    ainv = d.A - d.B @ dinv @ d.C
+    binv = d.B @ dinv
+    cinv = -dinv @ d.C
+
+    return ct.StateSpace(ainv, binv, cinv, dinv)
+
+
 def myhinfsyn(P, nmeas, ncon, initgamma=1e6):
     """H_{inf} control synthesis for plant P.
 
