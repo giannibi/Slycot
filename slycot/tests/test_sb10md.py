@@ -134,8 +134,8 @@ def musyn(AG, BG, CG, DG, f, nblock, itype, omega, maxiter=10, qutol=2, order=4,
 
             ADinv, BDinv, CDinv, DDinv = invss(D_A, D_B, D_C, D_D)
             # Compute D*G*(inv(D))
-            A1,B1,C1,D1 = cascss(AG,BG,CG,DG,ADinv,BDinv,CDinv,DDinv)
-            ADGDInv,BDGDInv,CDGDInv,DDGDInv = cascss(D_A,D_B,D_C,D_D,A1,B1,C1,D1)
+            A1,B1,C1,D1 = cascss(AG,BG,CG,DG,D_A,D_B,D_C,D_D)
+            ADGDInv,BDGDInv,CDGDInv,DDGDInv = cascss(ADinv,BDinv,CDinv,DDinv,A1,B1,C1,D1)
 
             # K-step: compute controller for current scaling
             try: 
